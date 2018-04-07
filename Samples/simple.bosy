@@ -1,0 +1,10 @@
+{
+    "semantics": "moore",
+	"inputs": ["r_0"],
+	"outputs": ["g_0"],
+	"assumptions": [],
+	"guarantees": [
+		"G (r_0 -> F g_0)",
+	]
+}
+
