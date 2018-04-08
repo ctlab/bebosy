@@ -5,6 +5,94 @@ import Automata
 import Specification
 import TransitionSystem
 
+struct ScenarioTree {
+    struct ScenarioNode {
+        let id: Int // just id to identify node
+        var nodes: [String:ScenarioNode] = [:]
+    }
+
+    var root = ScenarioNode(id: counter, nodes: [:])
+
+    init(scenarios: [[String]]) {
+        ScenarioTree.buildTree(&root, scenarios)
+    }
+
+    private static var counter = 0
+    private static func buildTree(_ node: inout ScenarioNode, _ scenarios: [[String]]) {
+        if scenarios.isEmpty { return }
+
+        var stateMap: [String: [[String]]] = [:]
+
+        for sc in scenarios {
+            if sc.isEmpty { continue }
+
+            let branch = sc.first!
+            if !stateMap.keys.contains(branch) {
+                stateMap[branch] = []
+            }
+
+            stateMap[branch]?.append(Array(sc.dropFirst()))
+        }
+
+        for (k, v) in stateMap {
+            counter += 1
+            var newNode = ScenarioNode(id: counter, nodes: [:])
+            buildTree(&newNode, v)
+            node.nodes[k] = newNode
+        }
+    }
+}
+
+extension ScenarioTree.ScenarioNode {
+    public var size: Int {
+        return nodes.count + nodes.values.map({ $0.size }).reduce(0, +)
+    }
+
+    public var dotTransitions: [String] {
+        var dot: [String] = []
+
+        for (k, v) in nodes {
+            dot.append("\t\"s\(id)\" -> \"s\(v.id)\" [label=\"\(k)\"];")
+            dot += v.dotTransitions
+        }
+
+        return dot
+    }
+
+    public var nodeIds: Set<Int> {
+        var ids = Set<Int>()
+
+        for v in nodes.values {
+            ids.insert(v.id)
+            ids = ids.union(v.nodeIds)
+        }
+
+        return ids
+    }
+}
+
+extension ScenarioTree {
+    public var size: Int {
+        return root.size + 1 // + 1 means root
+    }
+
+    public var dot: String {
+        var dot: [String] = []
+
+        for state in nodeIds {
+            dot.append("\t\"s\(state)\"[shape=circle,label=\"\(state)\"];")
+        }
+
+        dot += root.dotTransitions
+
+        return "digraph graphname {\n\(dot.joined(separator: "\n"))\n}"
+    }
+
+    public var nodeIds: Set<Int> {
+        return Set([root.id]).union(root.nodeIds)
+    }
+}
+
 struct ExplicitEncoding: BoSyEncoding {
     
     let options: BoSyOptions
@@ -23,6 +111,10 @@ struct ExplicitEncoding: BoSyEncoding {
         assignments = nil
         solutionBound = 0
     }
+
+    fileprivate static func extractScenarios(_ scenarios: [[String]]) -> [[(String, String?)]] {
+        return scenarios.map({ $0.map({ $0.split(around: ";") }) })
+    }
     
     func getEncoding(forBound bound: Int) -> Logic? {
         
@@ -35,7 +127,12 @@ struct ExplicitEncoding: BoSyEncoding {
         for state in automaton.initialStates {
             initialAssignment[lambda(0, state)] = Literal.True
         }
-        
+
+        print(ExplicitEncoding.extractScenarios(specification.scenarios))
+        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+        print(scenarioTree.size)
+        print(scenarioTree.dot)
+
         var matrix: [Logic] = []
         //matrix.append(automaton.initialStates.reduce(Literal.True, { (val, state) in val & lambda(0, state) }))
         
@@ -123,12 +220,12 @@ struct ExplicitEncoding: BoSyEncoding {
         }
         
         let existentials: [Proposition] = lambdas + lambdaSharps + taus + outputPropositions
-        
+
         var qbf: Logic = Quantifier(.Exists, variables: existentials, scope: formula)
         
         qbf = qbf.eval(assignment: initialAssignment)
         
-        //print(qbf)
+//        print(qbf)
         
         let boundednessCheck = BoundednessVisitor()
         assert(qbf.accept(visitor: boundednessCheck))

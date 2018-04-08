@@ -30,10 +30,11 @@ public struct SynthesisSpecification: Codable {
     public let outputs: [String]
     public let assumptions: [LTL]
     public let guarantees: [LTL]
+    public let scenarios: [[String]]
     
     public var dualized: SynthesisSpecification {
         let dualizedLTL = !ltl
-        return SynthesisSpecification(semantics: semantics.swapped, inputs: outputs, outputs: inputs, assumptions: [], guarantees: [dualizedLTL])
+        return SynthesisSpecification(semantics: semantics.swapped, inputs: outputs, outputs: inputs, assumptions: [], guarantees: [dualizedLTL], scenarios: scenarios)
     }
     
     public var ltl: LTL {
