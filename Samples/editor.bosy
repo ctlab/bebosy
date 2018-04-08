@@ -8,6 +8,28 @@
 	        "load;", "edit;", "edit;", "save;", "edit;", "exit;"
 	    ], [
 	        "load;", "edit;", "save;", "close;", "load;", "exit;"
+	    ], [
+	        "load;", "edit;", "close;", "exit;"
+	    ], [
+	        "load;", "close;", "load;", "exit;"
+	    ], [
+	        "load;", "edit;", "exit;"
+	    ], [
+	        "load;", "edit;", "edit;", "save;", "close;", "load;", "exit;"
+	    ], [
+	        "load;", "edit;", "edit;", "close;", "exit;"
+	    ], [
+	        "load;", "edit;", "edit;", "exit;"
+	    ], [
+	        "load;", "edit;", "edit;", "edit;"
+	    ], [
+	        "load;", "edit;", "save;", "edit;", "exit;"
+	    ], [
+	        "exit;", "exit;"
+	    ], [
+	        "load;", "edit;", "close;", "load;"
+	    ], [
+	        "load;", "exit;"
 	    ]
 	],
 	"guarantees": [
