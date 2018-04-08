@@ -5,6 +5,7 @@
 	"assumptions": [],
 	"guarantees": [
 		"G (r_0 -> F g_0)",
+		"G (r_0 -> X g_0)",
 	]
 }
 

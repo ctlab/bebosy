@@ -1,0 +1,22 @@
+{
+    "semantics": "moore",
+	"inputs": ["edit", "save", "load", "close"],
+	"outputs": [],
+	"assumptions": [],
+	"scenarios": [
+	    [
+	        "load;", "edit;", "edit;", "save;", "edit;", "exit;"
+	    ], [
+	        "load;", "edit;", "save;", "close;", "load;", "exit;"
+	    ]
+	],
+	"guarantees": [
+	        "edit R !save",
+            "G(!save || X(edit R !save))",
+            "G(!load || X(close R !load))",
+            "G(!close || X(load R !(save || edit || close)))",
+            "G(!exit || G exit)",
+	]
+}
+
+

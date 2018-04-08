@@ -1,0 +1,61 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Aiger",
+        "repositoryURL": "https://github.com/ltentrup/Aiger.git",
+        "state": {
+          "branch": null,
+          "revision": "8233cd0dcca3e78f557fb873e87c4fa73b3f782d",
+          "version": "0.2.3"
+        }
+      },
+      {
+        "package": "CAiger",
+        "repositoryURL": "https://github.com/ltentrup/CAiger.git",
+        "state": {
+          "branch": null,
+          "revision": "84649107eae28ce5dc73618a2da969fc318f3308",
+          "version": "0.1.2"
+        }
+      },
+      {
+        "package": "CCUDD",
+        "repositoryURL": "https://github.com/ltentrup/CCUDD.git",
+        "state": {
+          "branch": null,
+          "revision": "d0a329a70096d5cf7bdf9bc5010a519fd0f12137",
+          "version": "1.0.1"
+        }
+      },
+      {
+        "package": "CUDD",
+        "repositoryURL": "https://github.com/ltentrup/CUDD.git",
+        "state": {
+          "branch": null,
+          "revision": "fa253a88a05ba468af2fb9737f65bae09d48a5e6",
+          "version": "0.2.3"
+        }
+      },
+      {
+        "package": "SafetySynth",
+        "repositoryURL": "https://github.com/ltentrup/SafetySynth.git",
+        "state": {
+          "branch": null,
+          "revision": "2f3bf7e0a6657ae9a5a4781ea6578b9bf75dfa2a",
+          "version": "0.2.1"
+        }
+      },
+      {
+        "package": "SwiftPM",
+        "repositoryURL": "https://github.com/apple/swift-package-manager.git",
+        "state": {
+          "branch": null,
+          "revision": "63a01220e93271dc3bf204b9e13dd1aeb2beefee",
+          "version": "0.2.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
