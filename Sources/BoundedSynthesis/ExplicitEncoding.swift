@@ -59,6 +59,10 @@ extension ScenarioTree.ScenarioNode {
         return dot
     }
 
+    public var outs: [(Int, String)] {
+        return nodes.map { ($1.id, $0) }
+    }
+
     public var nodeIds: Set<Int> {
         var ids = Set<Int>()
 
@@ -68,6 +72,10 @@ extension ScenarioTree.ScenarioNode {
         }
 
         return ids
+    }
+
+    public var allNodes: [ScenarioTree.ScenarioNode] {
+        return nodes.map { $1 } + nodes.map { $1.allNodes } .flatMap { $0 }
     }
 }
 
@@ -90,6 +98,10 @@ extension ScenarioTree {
 
     public var nodeIds: Set<Int> {
         return Set([root.id]).union(root.nodeIds)
+    }
+
+    public var nodes: [ScenarioNode] {
+        return root.allNodes + [root]
     }
 }
 
@@ -115,6 +127,14 @@ struct ExplicitEncoding: BoSyEncoding {
     fileprivate static func extractScenarios(_ scenarios: [[String]]) -> [[(String, String?)]] {
         return scenarios.map({ $0.map({ $0.split(around: ";") }) })
     }
+
+    private func generateBinaryAssignment(forIO io: String) -> BooleanAssignment {
+        let inputs: [String] = io.split(around: ";").0.components(separatedBy: ",")
+
+        var assignments: BooleanAssignment = [:]
+        specification.inputs.forEach { assignments[Proposition($0)] = inputs.contains($0) ? Literal.True : Literal.False }
+        return assignments
+    }
     
     func getEncoding(forBound bound: Int) -> Logic? {
         
@@ -128,10 +148,13 @@ struct ExplicitEncoding: BoSyEncoding {
             initialAssignment[lambda(0, state)] = Literal.True
         }
 
-        print(ExplicitEncoding.extractScenarios(specification.scenarios))
+//        print(ExplicitEncoding.extractScenarios(specification.scenarios))
         let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
-        print(scenarioTree.size)
+//        print(scenarioTree.size)
         print(scenarioTree.dot)
+        print("Bound: \(bound)")
+        print(automaton.dot)
+
 
         var matrix: [Logic] = []
         //matrix.append(automaton.initialStates.reduce(Literal.True, { (val, state) in val & lambda(0, state) }))
@@ -145,7 +168,13 @@ struct ExplicitEncoding: BoSyEncoding {
                 conjunction.append(disjunction)
             }
             matrix.append(conjunction.reduce(Literal.True, &))
-            
+
+            var cc: [Logic] = []
+            for i in 0..<scenarioTree.size {
+                cc.append(c(forState: source, forScenarioVertex: i))
+            }
+            matrix.append(cc.reduce(Literal.False, |))
+
             func getRenamer(i: BooleanAssignment) -> RenamingBooleanVisitor {
                 if specification.semantics == .mealy {
                     return RenamingBooleanVisitor(rename: { name in self.specification.outputs.contains(name) ? self.output(name, forState: source, andInputs: i) : name })
@@ -153,7 +182,24 @@ struct ExplicitEncoding: BoSyEncoding {
                     return RenamingBooleanVisitor(rename: { name in self.specification.outputs.contains(name) ? self.output(name, forState: source) : name })
                 }
             }
-            
+
+            var cr: [Logic] = []
+            for node in scenarioTree.nodes {
+                let j = node.id
+
+                var tmp: [Logic] = []
+                for (j_, io) in node.outs {
+                    var disj: [Logic] = []
+                    for t_ in 0..<bound {
+                        disj.append(tau(source, generateBinaryAssignment(forIO: io), t_) & c(forState: t_, forScenarioVertex: j_))
+                    }
+                    tmp.append(disj.reduce(Literal.False, |))
+                }
+                print(tmp)
+                cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
+            }
+            matrix.append(cr.reduce(Literal.True, &))
+
             for q in automaton.states {
                 var conjunct: [Logic] = []
                 
@@ -185,8 +231,14 @@ struct ExplicitEncoding: BoSyEncoding {
                 matrix.append(lambda(source, q) -->  conjunct.reduce(Literal.True, &))
             }
         }
+
+//        print("matrix")
+//        print(matrix)
         
         let formula: Logic = matrix.reduce(Literal.True, &)
+        print("---------Formula")
+        print(formula)
+        print("---------")
         
         var lambdas: [Proposition] = []
         for s in 0..<bound {
@@ -218,15 +270,25 @@ struct ExplicitEncoding: BoSyEncoding {
                 }
             }
         }
+
+        var cc: [Proposition] = []
+        for s in 0..<bound {
+            for i in 0..<scenarioTree.size {
+                cc.append(c(forState: s, forScenarioVertex: i))
+            }
+        }
         
-        let existentials: [Proposition] = lambdas + lambdaSharps + taus + outputPropositions
+        let existentials: [Proposition] = lambdas + lambdaSharps + taus + outputPropositions + cc
 
         var qbf: Logic = Quantifier(.Exists, variables: existentials, scope: formula)
         
         qbf = qbf.eval(assignment: initialAssignment)
-        
+//        print("----init assignments")
+//        print(initialAssignment)
+//        print("----qbf")
+
 //        print(qbf)
-        
+//        print("------")
         let boundednessCheck = BoundednessVisitor()
         assert(qbf.accept(visitor: boundednessCheck))
         
@@ -277,6 +339,10 @@ struct ExplicitEncoding: BoSyEncoding {
         }
         assert(specification.semantics == .mealy)
         return "\(name)_\(state)_\(bitStringFromAssignment(inputs))"
+    }
+
+    func c(forState state: Int, forScenarioVertex scVertex: Int) -> Proposition {
+        return Proposition("c_\(state)_\(scVertex)")
     }
 
     
