@@ -24,6 +24,15 @@ public enum SupportedFileFormats {
     case tlsf
 }
 
+fileprivate func reverseScenarios(_ scenarios: [[String]]) -> [[String]] {
+    func reverseScenario(_ sc: String) -> String {
+        let r = sc.split(around: ";")
+        return (r.1 ?? "") + ";" + r.0
+    }
+
+    return scenarios.map { $0.map { reverseScenario($0) } }
+}
+
 public struct SynthesisSpecification: Codable {
     public var semantics: TransitionSystemType
     public let inputs: [String]
@@ -34,7 +43,7 @@ public struct SynthesisSpecification: Codable {
     
     public var dualized: SynthesisSpecification {
         let dualizedLTL = !ltl
-        return SynthesisSpecification(semantics: semantics.swapped, inputs: outputs, outputs: inputs, assumptions: [], guarantees: [dualizedLTL], scenarios: scenarios)
+        return SynthesisSpecification(semantics: semantics.swapped, inputs: outputs, outputs: inputs, assumptions: [], guarantees: [dualizedLTL], scenarios: reverseScenarios(scenarios))
     }
     
     public var ltl: LTL {
