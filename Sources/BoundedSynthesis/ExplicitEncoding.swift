@@ -148,17 +148,21 @@ struct ExplicitEncoding: BoSyEncoding {
             initialAssignment[lambda(0, state)] = Literal.True
         }
 
+        if !specification.scenarios.isEmpty {
+            initialAssignment[c(forState: 0, forScenarioVertex: 0)] = Literal.True
+        }
+
 //        print(ExplicitEncoding.extractScenarios(specification.scenarios))
         let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
 //        print(scenarioTree.size)
-        print(scenarioTree.dot)
-        print("Bound: \(bound)")
-        print(automaton.dot)
+//        print(scenarioTree.dot)
+//        print("Bound: \(bound)")
+//        print(automaton.dot)
 
 
         var matrix: [Logic] = []
         //matrix.append(automaton.initialStates.reduce(Literal.True, { (val, state) in val & lambda(0, state) }))
-        
+
         for source in states {
             // for every valuation of inputs, there must be at least one tau enabled
             var conjunction: [Logic] = []
@@ -170,8 +174,8 @@ struct ExplicitEncoding: BoSyEncoding {
             matrix.append(conjunction.reduce(Literal.True, &))
 
             var cc: [Logic] = []
-            for i in 0..<scenarioTree.size {
-                cc.append(c(forState: source, forScenarioVertex: i))
+            for node in scenarioTree.nodes {
+                cc.append(c(forState: source, forScenarioVertex: node.id))
             }
             matrix.append(cc.reduce(Literal.False, |))
 
@@ -195,7 +199,6 @@ struct ExplicitEncoding: BoSyEncoding {
                     }
                     tmp.append(disj.reduce(Literal.False, |))
                 }
-                print(tmp)
                 cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
             }
             matrix.append(cr.reduce(Literal.True, &))
@@ -236,9 +239,9 @@ struct ExplicitEncoding: BoSyEncoding {
 //        print(matrix)
         
         let formula: Logic = matrix.reduce(Literal.True, &)
-        print("---------Formula")
-        print(formula)
-        print("---------")
+//        print("---------Formula")
+//        print(formula)
+//        print("---------")
         
         var lambdas: [Proposition] = []
         for s in 0..<bound {
@@ -273,11 +276,11 @@ struct ExplicitEncoding: BoSyEncoding {
 
         var cc: [Proposition] = []
         for s in 0..<bound {
-            for i in 0..<scenarioTree.size {
-                cc.append(c(forState: s, forScenarioVertex: i))
+            for node in scenarioTree.nodes {
+                cc.append(c(forState: s, forScenarioVertex: node.id))
             }
         }
-        
+
         let existentials: [Proposition] = lambdas + lambdaSharps + taus + outputPropositions + cc
 
         var qbf: Logic = Quantifier(.Exists, variables: existentials, scope: formula)
