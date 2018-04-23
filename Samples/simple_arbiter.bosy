@@ -1,10 +1,21 @@
 {
-    "semantics": "moore",
+    "semantics": "mealy",
 	"inputs": ["r_0", "r_1"],
 	"outputs": ["g_0", "g_1"],
 	"assumptions": [],
+	"scenarios": [
+	    [
+	        "r_0;", ";g_0"
+	    ], [
+	        "r_0;g_0"
+	    ], [
+	        "r_1;g_1"
+	    ], [
+	        "r_0,r_1;g_0"
+	    ]
+	],
 	"guarantees": [
-	        "G (!g_0 || ! g_1)",
+        "G (!g_0 || ! g_1)",
 		"G (r_0 -> F g_0)",
 		"G (r_1 -> F g_1)",
 	]

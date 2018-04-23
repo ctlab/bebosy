@@ -1,0 +1,41 @@
+{
+    "semantics": "mealy",
+	"inputs": ["a", "me", "c", "ae", "m", "ec", "as", "mp", "ms", "mr", "cr", "ic", "cp", "cnl"],
+	"outputs": ["z12", "z13", "z10", "z11", "z8", "z9", "z4", "z5", "z6", "z7", "z1", "z2", "z3"],
+	"assumptions": [],
+	"scenarios": [
+
+	],
+	"guarantees": [
+        "G(!ic || z1)",
+        "G((!ec || z2) && (z2 -> ec))",
+        "G((a -> z3) && (z3 -> a))",
+        "G(ae -> z1)",
+        "G(as -> z4)",
+        "G(ic -> X(ec R !ic))",
+        "G(ec -> X(ic))",
+        "G(ic -> X(ec || a))",
+        "(as R !(z4 && !as))",
+        "(a R !(as || ae))",
+        "G((c -> z5) && (z5 -> c))",
+        "G((cr -> z6) && (z6 -> cr))",
+        "G((cp -> (z7 && z4)) && (z7 -> cp))",
+        "G(c -> F(z4))",
+        "G(c -> X(cr))",
+        "G(cr -> X(cnl || cp))",
+        "G(m -> z8)",
+        "G((mr -> z9) && (z9 -> mr))",
+        "G(me -> z8)",
+        "G((ms -> z10) && (z10 -> ms))",
+        "G((mp -> (z4 && z11 && z12 && z13)) && (z13 -> mp))",
+        "G(ms -> F(z4 && z11 && z12))",
+        "G((z11 -> z12) && (z12 -> z11))",
+        "G(ms -> F(z11))",
+        "G(m -> X(mr || cnl))",
+        "G(mr -> X(ms || me))",
+        "G(me -> X(mr || cnl))",
+        "G(ms -> X(cnl || mp))",
+        "G(cnl -> z4)",
+        "G(!X(ec) || (z4 || z1))"
+	]
+}
