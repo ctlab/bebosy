@@ -148,8 +148,10 @@ struct ExplicitEncoding: BoSyEncoding {
             initialAssignment[lambda(0, state)] = Literal.True
         }
 
+        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+
         if !specification.scenarios.isEmpty {
-            initialAssignment[c(forState: 0, forScenarioVertex: 0)] = Literal.True
+            initialAssignment[c(forState: 0, forScenarioVertex: scenarioTree.root.id)] = Literal.True
         }
 
 //        print(ExplicitEncoding.extractScenarios(specification.scenarios))
