@@ -135,6 +135,13 @@ struct ExplicitEncoding: BoSyEncoding {
         specification.inputs.forEach { assignments[Proposition($0)] = inputs.contains($0) ? Literal.True : Literal.False }
         return assignments
     }
+
+    private func getOuts(forIO io: String) -> [String] {
+        guard let outs: [String] = io.split(around: ";").1?.components(separatedBy: ",") else {
+            return []
+        }
+        return outs[0].isEmpty ? [] : outs
+    }
     
     func getEncoding(forBound bound: Int) -> Logic? {
         
@@ -197,7 +204,11 @@ struct ExplicitEncoding: BoSyEncoding {
                 for (j_, io) in node.outs {
                     var disj: [Logic] = []
                     for t_ in 0..<bound {
-                        disj.append(tau(source, generateBinaryAssignment(forIO: io), t_) & c(forState: t_, forScenarioVertex: j_))
+                        let assignment: BooleanAssignment = generateBinaryAssignment(forIO: io)
+                        let outs: [Logic] = specification.semantics == .mealy ?
+                            getOuts(forIO: io).map { Proposition(output($0, forState: source, andInputs: assignment)) } : []
+
+                        disj.append(tau(source, assignment, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &))
                     }
                     tmp.append(disj.reduce(Literal.False, |))
                 }
