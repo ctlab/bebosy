@@ -205,8 +205,13 @@ struct ExplicitEncoding: BoSyEncoding {
                     var disj: [Logic] = []
                     for t_ in 0..<bound {
                         let assignment: BooleanAssignment = generateBinaryAssignment(forIO: io)
-                        let outs: [Logic] = specification.semantics == .mealy ?
-                            getOuts(forIO: io).map { Proposition(output($0, forState: source, andInputs: assignment)) } : []
+                        var outs: [Logic] = []
+                        if specification.semantics == .mealy {
+                            let positiveOuts: [String] = getOuts(forIO: io)
+                            let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
+                            outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source, andInputs: assignment)) } +
+                                    negativeOuts.map { !Proposition(output($0, forState: source, andInputs: assignment)) })
+                        }
 
                         disj.append(tau(source, assignment, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &))
                     }
