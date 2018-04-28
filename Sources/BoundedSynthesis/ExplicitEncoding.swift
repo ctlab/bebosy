@@ -172,6 +172,16 @@ struct ExplicitEncoding: BoSyEncoding {
         var matrix: [Logic] = []
         //matrix.append(automaton.initialStates.reduce(Literal.True, { (val, state) in val & lambda(0, state) }))
 
+        var cComplete: [Logic] = []
+        for node in scenarioTree.nodes {
+            var cToTS: [Logic] = []
+            for source in states {
+                cToTS.append(c(forState: source, forScenarioVertex: node.id))
+            }
+            cComplete.append(cToTS.reduce(Literal.False, |))
+        }
+        matrix.append(cComplete.reduce(Literal.True, &))
+
         for source in states {
             // for every valuation of inputs, there must be at least one tau enabled
             var conjunction: [Logic] = []
@@ -181,12 +191,6 @@ struct ExplicitEncoding: BoSyEncoding {
                 conjunction.append(disjunction)
             }
             matrix.append(conjunction.reduce(Literal.True, &))
-
-            var cc: [Logic] = []
-            for node in scenarioTree.nodes {
-                cc.append(c(forState: source, forScenarioVertex: node.id))
-            }
-            matrix.append(cc.reduce(Literal.False, |))
 
             func getRenamer(i: BooleanAssignment) -> RenamingBooleanVisitor {
                 if specification.semantics == .mealy {
