@@ -27,6 +27,18 @@ struct InputSymbolicEncoding: BoSyEncoding {
         instance = nil
         solutionBound = 0
     }
+
+    private func getOuts(forIO io: String) -> [String] {
+        guard let outs: [String] = io.split(around: ";").1?.components(separatedBy: ",") else {
+            return []
+        }
+        return outs[0].isEmpty ? [] : outs
+    }
+
+    private func getInputs(forIO io: String) -> [String] {
+        let inputs: [String] = io.split(around: ";").0.components(separatedBy: ",")
+        return inputs[0].isEmpty ? [] : inputs
+    }
     
     func getEncoding(forBound bound: Int) -> Logic? {
         
@@ -37,8 +49,23 @@ struct InputSymbolicEncoding: BoSyEncoding {
         for state in automaton.initialStates {
             initialAssignment[lambda(0, state)] = Literal.True
         }
+
+        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+        if !specification.scenarios.isEmpty {
+            initialAssignment[c(forState: 0, forScenarioVertex: scenarioTree.root.id)] = Literal.True
+        }
         
         var matrix: [Logic] = []
+
+        var cComplete: [Logic] = []
+        for node in scenarioTree.nodes {
+            var cToTS: [Logic] = []
+            for source in states {
+                cToTS.append(c(forState: source, forScenarioVertex: node.id))
+            }
+            cComplete.append(cToTS.reduce(Literal.False, |))
+        }
+        matrix.append(cComplete.reduce(Literal.True, &))
         
         for source in states {
             // there must be at least one transition
@@ -70,9 +97,46 @@ struct InputSymbolicEncoding: BoSyEncoding {
                 }
                 matrix.append(lambda(source, q) --> conjunct.reduce(Literal.True, &))
             }
+
+            var cr: [Logic] = []
+            for node in scenarioTree.nodes {
+                let j = node.id
+
+                var tmp: [Logic] = []
+                for (j_, io) in node.outs {
+                    var disj: [Logic] = []
+                    for t_ in 0..<bound {
+                        var inputs: [Logic] = []
+                        var outs: [Logic] = []
+                        if specification.semantics == .mealy {
+                            let positiveOuts: [String] = getOuts(forIO: io)
+                            let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
+                            outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
+                                    negativeOuts.map { !Proposition(output($0, forState: source)) })
+
+                            let positiveInputs: [String] = getInputs(forIO: io)
+                            let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
+                            inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
+                        }
+
+                        disj.append(inputs.reduce(Literal.True, &) --> (tau(source, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &)))
+                    }
+                    tmp.append(disj.reduce(Literal.False, |))
+                }
+                cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
+            }
+            matrix.append(cr.reduce(Literal.True, &))
+        }
         }
         
         let formula: Logic = matrix.reduce(Literal.True, &)
+
+        var cc: [Proposition] = []
+        for s in 0..<bound {
+            for node in scenarioTree.nodes {
+                cc.append(c(forState: s, forScenarioVertex: node.id))
+            }
+        }
         
         var lambdas: [Proposition] = []
         for s in 0..<bound {
@@ -104,10 +168,10 @@ struct InputSymbolicEncoding: BoSyEncoding {
         switch specification.semantics {
         case .mealy:
             innerExistentials = taus + outputPropositions
-            outerExistentials = lambdas + lambdaSharps
+            outerExistentials = lambdas + lambdaSharps + cc
         case .moore:
             innerExistentials = taus
-            outerExistentials = lambdas + lambdaSharps + outputPropositions
+            outerExistentials = lambdas + lambdaSharps + outputPropositions + cc
         }
         
         var qbf: Logic = Quantifier(.Exists, variables: innerExistentials, scope: formula)
@@ -163,6 +227,10 @@ struct InputSymbolicEncoding: BoSyEncoding {
     
     func output(_ name: String, forState state: Int) -> String {
         return "\(name)_\(state)"
+    }
+
+    func c(forState state: Int, forScenarioVertex scVertex: Int) -> Proposition {
+        return Proposition("c_\(state)_\(scVertex)")
     }
     
     mutating func solve(forBound bound: Int) throws -> Bool {
