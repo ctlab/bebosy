@@ -105,28 +105,30 @@ struct InputSymbolicEncoding: BoSyEncoding {
                 var tmp: [Logic] = []
                 for (j_, io) in node.outs {
                     var disj: [Logic] = []
-                    for t_ in 0..<bound {
-                        var inputs: [Logic] = []
-                        var outs: [Logic] = []
-                        if specification.semantics == .mealy {
-                            let positiveOuts: [String] = getOuts(forIO: io)
-                            let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
-                            outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
-                                    negativeOuts.map { !Proposition(output($0, forState: source)) })
 
-                            let positiveInputs: [String] = getInputs(forIO: io)
-                            let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
-                            inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
-                        }
+                    var inputs: [Logic] = []
+                    var outs: [Logic] = []
+                    if specification.semantics == .mealy {
+                        let positiveOuts: [String] = getOuts(forIO: io)
+                        let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
+                        outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
+                                negativeOuts.map { !Proposition(output($0, forState: source)) })
 
-                        disj.append(inputs.reduce(Literal.True, &) --> (tau(source, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &)))
+                        let positiveInputs: [String] = getInputs(forIO: io)
+                        let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
+                        inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
                     }
-                    tmp.append(disj.reduce(Literal.False, |))
+                    let i: Logic = inputs.reduce(Literal.True, &)
+                    let o: Logic = outs.reduce(Literal.True, &)
+
+                    for t_ in 0..<bound {
+                        disj.append(tau(source, t_) & c(forState: t_, forScenarioVertex: j_))
+                    }
+                    tmp.append(i --> (o & disj.reduce(Literal.False, |)))
                 }
                 cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
             }
             matrix.append(cr.reduce(Literal.True, &))
-        }
         }
         
         let formula: Logic = matrix.reduce(Literal.True, &)
