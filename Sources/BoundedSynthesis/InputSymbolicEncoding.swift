@@ -27,18 +27,6 @@ struct InputSymbolicEncoding: BoSyEncoding {
         instance = nil
         solutionBound = 0
     }
-
-    private func getOuts(forIO io: String) -> [String] {
-        guard let outs: [String] = io.split(around: ";").1?.components(separatedBy: ",") else {
-            return []
-        }
-        return outs[0].isEmpty ? [] : outs
-    }
-
-    private func getInputs(forIO io: String) -> [String] {
-        let inputs: [String] = io.split(around: ";").0.components(separatedBy: ",")
-        return inputs[0].isEmpty ? [] : inputs
-    }
     
     func getEncoding(forBound bound: Int) -> Logic? {
         
@@ -109,12 +97,12 @@ struct InputSymbolicEncoding: BoSyEncoding {
                     var inputs: [Logic] = []
                     var outs: [Logic] = []
                     if specification.semantics == .mealy {
-                        let positiveOuts: [String] = getOuts(forIO: io)
+                        let positiveOuts: [String] = io.outs
                         let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
                         outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
                                 negativeOuts.map { !Proposition(output($0, forState: source)) })
 
-                        let positiveInputs: [String] = getInputs(forIO: io)
+                        let positiveInputs: [String] = io.inputs
                         let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
                         inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
                     }
