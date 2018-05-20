@@ -162,7 +162,7 @@ struct ExplicitEncoding: BoSyEncoding {
         }
 
 //        print(ExplicitEncoding.extractScenarios(specification.scenarios))
-        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+//        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
 //        print(scenarioTree.size)
 //        print(scenarioTree.dot)
 //        print("Bound: \(bound)")
