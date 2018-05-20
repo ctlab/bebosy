@@ -5,106 +5,6 @@ import Automata
 import Specification
 import TransitionSystem
 
-struct ScenarioTree {
-    struct ScenarioNode {
-        let id: Int // just id to identify node
-        var nodes: [String:ScenarioNode] = [:]
-    }
-
-    var root = ScenarioNode(id: counter, nodes: [:])
-
-    init(scenarios: [[String]]) {
-        ScenarioTree.buildTree(&root, scenarios)
-    }
-
-    private static var counter = 0
-    private static func buildTree(_ node: inout ScenarioNode, _ scenarios: [[String]]) {
-        if scenarios.isEmpty { return }
-
-        var stateMap: [String: [[String]]] = [:]
-
-        for sc in scenarios {
-            if sc.isEmpty { continue }
-
-            let branch = sc.first!
-            if !stateMap.keys.contains(branch) {
-                stateMap[branch] = []
-            }
-
-            stateMap[branch]?.append(Array(sc.dropFirst()))
-        }
-
-        for (k, v) in stateMap {
-            counter += 1
-            var newNode = ScenarioNode(id: counter, nodes: [:])
-            buildTree(&newNode, v)
-            node.nodes[k] = newNode
-        }
-    }
-}
-
-extension ScenarioTree.ScenarioNode {
-    public var size: Int {
-        return nodes.count + nodes.values.map({ $0.size }).reduce(0, +)
-    }
-
-    public var dotTransitions: [String] {
-        var dot: [String] = []
-
-        for (k, v) in nodes {
-            dot.append("\t\"s\(id)\" -> \"s\(v.id)\" [label=\"\(k)\"];")
-            dot += v.dotTransitions
-        }
-
-        return dot
-    }
-
-    public var outs: [(Int, String)] {
-        return nodes.map { ($1.id, $0) }
-    }
-
-    public var nodeIds: Set<Int> {
-        var ids = Set<Int>()
-
-        for v in nodes.values {
-            ids.insert(v.id)
-            ids = ids.union(v.nodeIds)
-        }
-
-        return ids
-    }
-
-    public var allNodes: [ScenarioTree.ScenarioNode] {
-        return nodes.map { $1 } + nodes.map { $1.allNodes } .flatMap { $0 }
-    }
-}
-
-extension ScenarioTree {
-    public var size: Int {
-        return root.size + 1 // + 1 means root
-    }
-
-    public var dot: String {
-        var dot: [String] = []
-
-        for state in nodeIds {
-            dot.append("\t\"s\(state)\"[shape=circle,label=\"\(state)\"];")
-        }
-
-        dot += root.dotTransitions
-
-        return "digraph graphname {\n\(dot.joined(separator: "\n"))\n}"
-    }
-
-    public var nodeIds: Set<Int> {
-        return Set([root.id]).union(root.nodeIds)
-    }
-
-    public var nodes: [ScenarioNode] {
-        return root.allNodes + [root]
-    }
-}
-
 struct ExplicitEncoding: BoSyEncoding {
     
     let options: BoSyOptions
@@ -124,23 +24,10 @@ struct ExplicitEncoding: BoSyEncoding {
         solutionBound = 0
     }
 
-    fileprivate static func extractScenarios(_ scenarios: [[String]]) -> [[(String, String?)]] {
-        return scenarios.map({ $0.map({ $0.split(around: ";") }) })
-    }
-
-    private func generateBinaryAssignment(forIO io: String) -> BooleanAssignment {
-        let inputs: [String] = io.split(around: ";").0.components(separatedBy: ",")
-
+    private func generateBinaryAssignment(forInputs inputs: [String]) -> BooleanAssignment {
         var assignments: BooleanAssignment = [:]
         specification.inputs.forEach { assignments[Proposition($0)] = inputs.contains($0) ? Literal.True : Literal.False }
         return assignments
-    }
-
-    private func getOuts(forIO io: String) -> [String] {
-        guard let outs: [String] = io.split(around: ";").1?.components(separatedBy: ",") else {
-            return []
-        }
-        return outs[0].isEmpty ? [] : outs
     }
     
     func getEncoding(forBound bound: Int) -> Logic? {
@@ -162,7 +49,6 @@ struct ExplicitEncoding: BoSyEncoding {
         }
 
 //        print(ExplicitEncoding.extractScenarios(specification.scenarios))
-//        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
 //        print(scenarioTree.size)
 //        print(scenarioTree.dot)
 //        print("Bound: \(bound)")
@@ -208,10 +94,10 @@ struct ExplicitEncoding: BoSyEncoding {
                 for (j_, io) in node.outs {
                     var disj: [Logic] = []
                     for t_ in 0..<bound {
-                        let assignment: BooleanAssignment = generateBinaryAssignment(forIO: io)
+                        let assignment: BooleanAssignment = generateBinaryAssignment(forInputs: io.inputs)
                         var outs: [Logic] = []
                         if specification.semantics == .mealy {
-                            let positiveOuts: [String] = getOuts(forIO: io)
+                            let positiveOuts: [String] = io.outs
                             let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
                             outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source, andInputs: assignment)) } +
                                     negativeOuts.map { !Proposition(output($0, forState: source, andInputs: assignment)) })
