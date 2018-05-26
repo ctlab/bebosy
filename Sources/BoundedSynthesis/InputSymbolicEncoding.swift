@@ -46,7 +46,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
         var matrix: [Logic] = []
 
         var cComplete: [Logic] = []
-        for node in scenarioTree.nodes {
+        for node in scenarioTree.uniqueNodes {
             var cToTS: [Logic] = []
             for source in states {
                 cToTS.append(c(forState: source, forScenarioVertex: node.id))
@@ -87,7 +87,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
             }
 
             var cr: [Logic] = []
-            for node in scenarioTree.nodes {
+            for node in scenarioTree.uniqueNodes {
                 let j = node.id
 
                 var tmp: [Logic] = []

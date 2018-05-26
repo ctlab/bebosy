@@ -50,6 +50,10 @@ struct ScenarioTree {
 
     var root = ScenarioNode(id: counter, nodes: [:])
 
+    var uniqueNodes: Set<ScenarioNode> {
+        return Set(nodes)
+    }
+
     init(scenarios: [[String]]) {
         ScenarioTree.buildTree(&root, scenarios)
     }
@@ -117,6 +121,16 @@ extension ScenarioTree.ScenarioNode {
 
     public var allNodes: [ScenarioTree.ScenarioNode] {
         return nodes.map { $1 } + nodes.map { $1.allNodes } .flatMap { $0 }
+    }
+}
+
+extension ScenarioTree.ScenarioNode: Hashable {
+    var hashValue: Int {
+        return id
+    }
+
+    static func ==(lhs: ScenarioTree.ScenarioNode, rhs: ScenarioTree.ScenarioNode) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 
