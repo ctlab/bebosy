@@ -50,16 +50,15 @@ struct ScenarioTree {
 
     var root = ScenarioNode(id: counter, nodes: [:])
 
-    var uniqueNodes: Set<ScenarioNode> {
-        return Set(nodes)
-    }
+    var uniqueNodes: Set<ScenarioNode> = Set()
 
     init(scenarios: [[String]]) {
-        ScenarioTree.buildTree(&root, scenarios)
+        ScenarioTree.buildTree(&root, scenarios, &uniqueNodes)
+        uniqueNodes.insert(root)
     }
 
     private static var counter = 0
-    private static func buildTree(_ node: inout ScenarioNode, _ scenarios: [[String]]) {
+    private static func buildTree(_ node: inout ScenarioNode, _ scenarios: [[String]], _ allNodes: inout Set<ScenarioNode>) {
         if scenarios.isEmpty { return }
 
         var stateMap: [ScenarioBranch: [[String]]] = [:]
@@ -82,8 +81,9 @@ struct ScenarioTree {
         for (k, v) in stateMap {
             counter += 1
             var newNode = ScenarioNode(id: counter, nodes: [:])
-            buildTree(&newNode, v)
+            buildTree(&newNode, v, &allNodes)
             node.nodes[k] = newNode
+            allNodes.insert(newNode)
         }
     }
 }
@@ -151,11 +151,178 @@ extension ScenarioTree {
         return "digraph graphname {\n\(dot.joined(separator: "\n"))\n}"
     }
 
+    public var dot2: String {
+        var dot: [String] = []
+        for state in nodeIds {
+            dot.append("\t\"s\(state)\"[shape=circle,label=\"\(state)\"];")
+        }
+
+        for node in uniqueNodes {
+            for (k, v) in node.nodes {
+                dot.append("\t\"s\(node.id)\" -> \"s\(v.id)\" [label=\"\(k.inputs.joined(separator: ", ")) / \(k.outs.joined(separator: ", "))\"];")
+            }
+        }
+
+        return "digraph graphname {\n\(dot.joined(separator: "\n"))\n}"
+    }
+
     public var nodeIds: Set<Int> {
-        return Set([root.id]).union(root.nodeIds)
+        return Set(uniqueNodes.map { $0.id })
     }
 
     public var nodes: [ScenarioNode] {
         return root.allNodes + [root]
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ScenarioNode2 {
+    private static var id = 0
+    private static func getNewId() -> Int {
+        id += 1
+        return id
+    }
+
+    let id: Int
+    var nodes: [ScenarioBranch: ScenarioNode2]
+
+    var nodesReversed: [ScenarioBranch: [ScenarioNode2]]
+
+    init() {
+        id = ScenarioNode2.getNewId()
+        nodes = [:]
+        nodesReversed = [:]
+    }
+
+    func addNode(branch b: ScenarioBranch, node n: ScenarioNode2) {
+        nodes[b] = n
+
+        if n.nodesReversed[b] == nil {
+            n.nodesReversed[b] = [self]
+        } else {
+            n.nodesReversed[b]!.append(self)
+        }
+    }
+
+    public var outs: [(Int, ScenarioBranch)] {
+        return nodes.map { ($1.id, $0) }
+    }
+}
+
+extension ScenarioNode2: Hashable {
+    var hashValue: Int {
+        return id
+    }
+
+    static func ==(lhs: ScenarioNode2, rhs: ScenarioNode2) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+
+class ScenarioTree2 {
+
+    let root = ScenarioNode2()
+    let tail = ScenarioNode2()
+    var nodes = Set<ScenarioNode2>()
+
+    var nodeIds: [Int] {
+        return nodes.map { $0.id }
+    }
+
+    init(scenarios: [[String]]) {
+        nodes.insert(root)
+        for sc in scenarios {
+            addScenario(scenario: sc)
+        }
+
+        mergeTails()
+
+        recursiveMerge(tail)
+        nodes.insert(tail)
+    }
+
+    func addScenario(scenario: [String]) {
+        var node = root
+
+        for i in scenario.indices {
+            let item: String = scenario[i]
+            let branch = ScenarioBranch(inputs: getInputs(forIO: item), outs: getOuts(forIO: item))
+
+            if let next = node.nodes[branch] {
+                node = next
+            } else {
+                let next = ScenarioNode2()
+                nodes.insert(next)
+                node.addNode(branch: branch, node: next)
+                node = next
+            }
+        }
+    }
+
+    private func mergeTails() {
+        var nodesToRemove = Set<ScenarioNode2>()
+        for node in nodes {
+            if node.nodes.isEmpty {
+                for (branch, rNodes) in node.nodesReversed {
+                    for rNode in rNodes {
+                        rNode.addNode(branch: branch, node: tail)
+                    }
+                }
+                nodesToRemove.insert(node)
+            }
+        }
+
+        for node in nodesToRemove {
+            nodes.remove(node)
+        }
+    }
+
+    private func recursiveMerge(_ node: ScenarioNode2) {
+        for (_, rNodes) in node.nodesReversed {
+            let to = rNodes.first!
+            for rNode in rNodes.dropFirst() {
+                for (branch, nds) in rNode.nodesReversed {
+                    for nd in nds {
+                        nd.addNode(branch: branch, node: to)
+                    }
+                }
+                nodes.remove(rNode)
+            }
+
+            recursiveMerge(to)
+        }
+    }
+}
+
+extension ScenarioTree2 {
+    public var dot: String {
+        var dot: [String] = []
+        for state in nodeIds {
+            dot.append("\t\"s\(state)\"[shape=circle,label=\"\(state)\"];")
+        }
+
+        for node in nodes {
+            for (k, v) in node.nodes {
+                dot.append("\t\"s\(node.id)\" -> \"s\(v.id)\" [label=\"\(k.inputs.joined(separator: ", ")) / \(k.outs.joined(separator: ", "))\"];")
+            }
+        }
+
+        return "digraph graphname {\n\(dot.joined(separator: "\n"))\n}"
     }
 }
