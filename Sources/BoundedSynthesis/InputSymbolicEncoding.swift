@@ -11,6 +11,8 @@ struct InputSymbolicEncoding: BoSyEncoding {
     let automaton: CoBüchiAutomaton
     let specification: SynthesisSpecification
     let synthesize: Bool
+
+    let sTree: ScenarioTree2
     
     // intermediate results
     var assignments: BooleanAssignment?
@@ -22,7 +24,9 @@ struct InputSymbolicEncoding: BoSyEncoding {
         self.automaton = automaton
         self.specification = specification
         self.synthesize = synthesize
-        
+
+        self.sTree = ScenarioTree2(scenarios: specification.scenarios)
+
         assignments = nil
         instance = nil
         solutionBound = 0
@@ -38,22 +42,23 @@ struct InputSymbolicEncoding: BoSyEncoding {
             initialAssignment[lambda(0, state)] = Literal.True
         }
 
-        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+        let scenarioTree = sTree
+
         if !specification.scenarios.isEmpty {
             initialAssignment[c(forState: 0, forScenarioVertex: scenarioTree.root.id)] = Literal.True
         }
-        
+
         var matrix: [Logic] = []
 
         var cComplete: [Logic] = []
-        for node in scenarioTree.uniqueNodes {
+        for node in scenarioTree.nodes {
             var cToTS: [Logic] = []
             for source in states {
                 cToTS.append(c(forState: source, forScenarioVertex: node.id))
             }
             cComplete.append(cToTS.reduce(Literal.False, |))
         }
-        matrix.append(cComplete.reduce(Literal.True, &))
+//        matrix.append(cComplete.reduce(Literal.True, &))
         
         for source in states {
             // there must be at least one transition
@@ -87,7 +92,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
             }
 
             var cr: [Logic] = []
-            for node in scenarioTree.uniqueNodes {
+            for node in scenarioTree.nodes {
                 let j = node.id
 
                 var tmp: [Logic] = []
@@ -96,11 +101,16 @@ struct InputSymbolicEncoding: BoSyEncoding {
 
                     var inputs: [Logic] = []
                     var outs: [Logic] = []
+
+                    var positO: [Logic] = []
+
                     if specification.semantics == .mealy {
                         let positiveOuts: [String] = io.outs
                         let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
                         outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
                                 negativeOuts.map { !Proposition(output($0, forState: source)) })
+
+                        positO.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) })
 
                         let positiveInputs: [String] = io.inputs
                         let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
@@ -109,10 +119,14 @@ struct InputSymbolicEncoding: BoSyEncoding {
                     let i: Logic = inputs.reduce(Literal.True, &)
                     let o: Logic = outs.reduce(Literal.True, &)
 
+                    let notO: Logic = positO.map { !$0 }.reduce(Literal.False, |)
+                    let notI: Logic = inputs.map { !$0 }.reduce(Literal.False, |)
+
                     for t_ in 0..<bound {
-                        disj.append(tau(source, t_) & c(forState: t_, forScenarioVertex: j_))
+                        disj.append(tau(source, t_) --> c(forState: t_, forScenarioVertex: j_))
                     }
-                    tmp.append(i --> (o & disj.reduce(Literal.False, |)))
+                    tmp.append((i & o) --> disj.reduce(Literal.True, &))
+                    tmp.append(notI | !notO)
                 }
                 cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
             }
@@ -170,7 +184,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
         
         qbf = qbf.eval(assignment: initialAssignment)
         
-        //print(qbf)
+//        print(qbf)
         
         let boundednessCheck = BoundednessVisitor()
         assert(qbf.accept(visitor: boundednessCheck))
