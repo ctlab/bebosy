@@ -10,7 +10,9 @@ struct ExplicitEncoding: BoSyEncoding {
     let options: BoSyOptions
     let automaton: CoBüchiAutomaton
     let specification: SynthesisSpecification
-    
+
+    let sTree: ScenarioTree2
+
     // intermediate results
     var assignments: BooleanAssignment?
     var solutionBound: Int
@@ -19,7 +21,9 @@ struct ExplicitEncoding: BoSyEncoding {
         self.options = options
         self.automaton = automaton
         self.specification = specification
-        
+
+        self.sTree = ScenarioTree2(scenarios: specification.scenarios)
+
         assignments = nil
         solutionBound = 0
     }
@@ -42,7 +46,7 @@ struct ExplicitEncoding: BoSyEncoding {
             initialAssignment[lambda(0, state)] = Literal.True
         }
 
-        let scenarioTree = ScenarioTree(scenarios: specification.scenarios)
+        let scenarioTree = sTree
 
         if !specification.scenarios.isEmpty {
             initialAssignment[c(forState: 0, forScenarioVertex: scenarioTree.root.id)] = Literal.True
@@ -66,7 +70,7 @@ struct ExplicitEncoding: BoSyEncoding {
             }
             cComplete.append(cToTS.reduce(Literal.False, |))
         }
-        matrix.append(cComplete.reduce(Literal.True, &))
+        // matrix.append(cComplete.reduce(Literal.True, &))
 
         for source in states {
             // for every valuation of inputs, there must be at least one tau enabled
