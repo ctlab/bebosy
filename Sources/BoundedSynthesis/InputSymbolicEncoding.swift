@@ -119,14 +119,10 @@ struct InputSymbolicEncoding: BoSyEncoding {
                     let i: Logic = inputs.reduce(Literal.True, &)
                     let o: Logic = outs.reduce(Literal.True, &)
 
-                    let notO: Logic = positO.map { !$0 }.reduce(Literal.False, |)
-                    let notI: Logic = inputs.map { !$0 }.reduce(Literal.False, |)
-
                     for t_ in 0..<bound {
                         disj.append(tau(source, t_) --> c(forState: t_, forScenarioVertex: j_))
                     }
                     tmp.append(i --> (o & disj.reduce(Literal.True, &)))
-//                    tmp.append(notI | !notO)
                 }
                 cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
             }
