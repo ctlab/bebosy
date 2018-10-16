@@ -132,7 +132,7 @@ class ScenarioTree2 {
         recursiveMerge(tail)
         nodes.insert(tail)
 
-        inputsSet.append(contentsOf: ScenarioTree2.buildInputsSet(forNodes: Array(nodes)))
+        // inputsSet.append(contentsOf: ScenarioTree2.buildInputsSet(forNodes: Array(nodes)))
     }
 
     func addScenario(scenario: [String]) {
