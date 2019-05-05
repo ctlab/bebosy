@@ -64,6 +64,9 @@ public struct BoSyOptions {
     public var syntcomp2017rules: Bool = false
     public var minBound: Int = 1
     public var maxBound: Int? = nil
+
+    public var explicitSct: ExplicitScenarioType = .base
+    public var inputSymbolicSct: InputSymbolicScenarioType = .base
     
     public init() {}
     
@@ -114,6 +117,24 @@ public struct BoSyOptions {
                     throw CommandLineOptionsError.wrongChoice(argument: argument, choice: value, choices: Backends.allValues.map({ $0.rawValue }))
                 }
                 backend = _backend
+
+            case "--explicit-sct":
+                guard let value = arguments.popFirst() else {
+                    throw CommandLineOptionsError.noValue(argument: argument)
+                }
+                guard let _explicitSct = ExplicitScenarioType(rawValue: value) else {
+                    throw CommandLineOptionsError.wrongChoice(argument: argument, choice: value, choices: ExplicitScenarioType.allValues.map({ $0.rawValue }))
+                }
+                explicitSct = _explicitSct
+            case "--input-symbolic":
+                guard let value = arguments.popFirst() else {
+                    throw CommandLineOptionsError.noValue(argument: argument)
+                }
+                guard let _inputSymbolicSct = InputSymbolicScenarioType(rawValue: value) else {
+                    throw CommandLineOptionsError.wrongChoice(argument: argument, choice: value, choices: InputSymbolicScenarioType.allValues.map({ $0.rawValue }))
+                }
+                inputSymbolicSct = _inputSymbolicSct
+
             case "--automaton-tool":
                 guard let value = arguments.popFirst() else {
                     throw CommandLineOptionsError.noValue(argument: argument)
@@ -263,6 +284,8 @@ public struct BoSyOptions {
               "  --strategy linear|exponential\n",
               "  --player both|system|environment\n",
               "  --backend \(Backends.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",
+              "  --explicit-sct \(ExplicitScenarioType.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",
+              "  --input-symbolic-sct \(InputSymbolicScenarioType.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",
               "  --semantics \(TransitionSystemType.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",
               "  --automaton-tool \(LTL2AutomatonConverter.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",
               "  --target \(Target.allValues.map({ $0.rawValue }).joined(separator: "|"))\n",

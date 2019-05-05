@@ -151,3 +151,25 @@ public struct SolutionSearch {
         return encoding.extractSolution()
     }
 }
+
+public enum ExplicitScenarioType: String {
+    case base = "base"
+    case transitionComplete = "trans-complete"
+
+    public static let allValues: [ExplicitScenarioType] = [
+        .base,
+        .transitionComplete
+    ]
+}
+
+public enum InputSymbolicScenarioType: String {
+    case base = "base"
+    case globalClusters = "global-clusters"
+    case transitionComplete = "trans-complete"
+
+    public static let allValues: [InputSymbolicScenarioType] = [
+        .base,
+        .globalClusters,
+        .transitionComplete
+    ]
+}
