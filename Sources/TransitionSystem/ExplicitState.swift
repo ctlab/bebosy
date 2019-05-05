@@ -148,6 +148,50 @@ extension ExplicitStateSolution: DotRepresentable {
         }
         return outputTransitions
     }
+
+    private func getAllVariants() -> [BooleanAssignment] {
+        var bs: BooleanAssignment = [:]
+        return getAllVars(inputs: specification.inputs, current: &bs)
+    }
+
+    private func getAllVars(inputs: [String], current: inout BooleanAssignment) -> [BooleanAssignment] {
+        if inputs.isEmpty {
+            return [current]
+        } else {
+            let i = inputs.first!
+            let rest = Array(inputs.dropFirst())
+
+            var a = current
+            a[Proposition(i)] = Literal.True
+
+            var b = current
+            b[Proposition(i)] = Literal.False
+
+            let ans = getAllVars(inputs: rest, current: &a) + getAllVars(inputs: rest, current: &b)
+
+            return ans
+        }
+    }
+
+    private func findEval(logic: Logic) -> [BooleanAssignment] {
+        return getAllVariants().filter {
+            let res = logic.eval(assignment: $0)
+            return (res as! Literal) == Literal.True
+        }
+    }
+
+    private func getTransFromEvals(evals: [BooleanAssignment]) -> Logic {
+        var str: [Logic] = []
+        for eval in evals {
+            var line: [Logic] = []
+            for (lit, value) in eval {
+                line.append(value == Literal.True ? lit : !lit)
+            }
+            str.append(line.reduce(Literal.True, &))
+        }
+
+        return str.reduce(Literal.False, |)
+    }
     
     private func _toDot(labelEdges: Bool = true) -> String {
         var dot: [String] = []
@@ -166,7 +210,12 @@ extension ExplicitStateSolution: DotRepresentable {
                 for (source, outgoing) in transitionOutputs {
                     for (target, iterator) in outgoing {
                         for (transitionGuard: transitionGuard, outputs: outputs) in iterator {
-                            dot.append("\ts\(source) -> s\(target) [label=\"\(transitionGuard) / \(outputs.joined(separator: " "))\"];")
+                            let evals = findEval(logic: transitionGuard)
+                            let trans = getTransFromEvals(evals: evals)
+                            if let trans = trans as? Literal, trans == Literal.False {
+                                continue
+                            }
+                            dot.append("\ts\(source) -> s\(target) [label=\"\(trans) / \(outputs.joined(separator: " "))\"];")
                         }
                     }
                 }
