@@ -107,9 +107,20 @@ struct ExplicitEncoding: BoSyEncoding {
                                     negativeOuts.map { !Proposition(output($0, forState: source, andInputs: assignment)) })
                         }
 
-                        disj.append(tau(source, assignment, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &))
+                        switch self.options.explicitSct {
+                        case .base:
+                            disj.append(tau(source, assignment, t_) & c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &))
+                        case .transitionComplete:
+                            disj.append(tau(source, assignment, t_) --> (c(forState: t_, forScenarioVertex: j_) & outs.reduce(Literal.True, &)))
+                        }
                     }
-                    tmp.append(disj.reduce(Literal.False, |))
+                    
+                    switch self.options.explicitSct {
+                    case .base:
+                        tmp.append(disj.reduce(Literal.False, |))
+                    case .transitionComplete:
+                        tmp.append(disj.reduce(Literal.True, &))
+                    }
                 }
                 cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
             }
