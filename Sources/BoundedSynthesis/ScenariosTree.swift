@@ -115,7 +115,7 @@ class ScenarioTree2 {
     let tail = ScenarioNode2()
     var nodes = Set<ScenarioNode2>()
 
-    var inputsSet: [(Vars, [ScenarioNode2])] = []
+    var inputsSet: [(Vars, [Int: [(Int, ScenarioBranch)]])] = []
 
     var nodeIds: [Int] {
         return nodes.map { $0.id }
@@ -132,7 +132,7 @@ class ScenarioTree2 {
         recursiveMerge(tail)
         nodes.insert(tail)
 
-        // inputsSet.append(contentsOf: ScenarioTree2.buildInputsSet(forNodes: Array(nodes)))
+        inputsSet.append(contentsOf: ScenarioTree2.buildInputsSet(forNodes: Array(nodes)))
     }
 
     func addScenario(scenario: [String]) {
@@ -189,17 +189,21 @@ class ScenarioTree2 {
 
 
 
-    private static func buildInputsSet(forNodes nodes: [ScenarioNode2]) -> [(Vars, [ScenarioNode2])] {
-        var inputSet: [VarsHashable: [ScenarioNode2]] = [:]
+    private static func buildInputsSet(forNodes nodes: [ScenarioNode2]) -> [(Vars, [Int: [(Int, ScenarioBranch)]])] {
+        var inputSet: [VarsHashable: [Int: [(Int, ScenarioBranch)]]] = [:]
 
         for node in nodes {
-            for (branch, nextNode) in node.nodes {
+            for (id, branch) in node.outs {
                 let inputs = VarsHashable(vars: branch.inputs)
                 if !inputSet.keys.contains(inputs) {
-                    inputSet[inputs] = []
+                    inputSet[inputs] = [:]
                 }
 
-                inputSet[inputs]?.append(nextNode)
+                if !(inputSet[inputs]!.keys.contains(node.id)) {
+                    inputSet[inputs]?[node.id] = []
+                }
+
+                inputSet[inputs]?[node.id]?.append((id, branch))
             }
         }
 

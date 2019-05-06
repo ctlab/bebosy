@@ -189,6 +189,39 @@ struct InputSymbolicEncoding: BoSyEncoding {
 
             matrix.append(cr.reduce(Literal.True, &))
         }
+
+        if self.options.inputSymbolicSct == .globalClusters {
+            var inputs: [Logic] = []
+            for (positiveInputs, nodeToOuts) in scenarioTree.inputsSet {
+                let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
+                let i = (positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) }).reduce(Literal.True, &)
+
+                var cr: [Logic] = []
+
+                for source in states {
+                    for (j, nodeOuts) in nodeToOuts {
+
+                        var tmp: [Logic] = []
+                        for (j_, io) in nodeOuts {
+                            var disj: [Logic] = []
+
+                            let negativeOuts: [String] = specification.outputs.filter { !io.outs.contains($0) }
+                            let outs: [Logic] = io.outs.map { Proposition(output($0, forState: source)) } + negativeOuts.map { !Proposition(output($0, forState: source)) }
+
+                            let o: Logic = outs.reduce(Literal.True, &)
+
+                            for t_ in states {
+                                disj.append(tau(source, t_) --> c(forState: t_, forScenarioVertex: j_))
+                            }
+                            tmp.append(o & disj.reduce(Literal.True, &))
+                        }
+                        cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
+                    }
+                }
+                inputs.append(i --> cr.reduce(Literal.True, &))
+            }
+            matrix.append(inputs.reduce(Literal.True, &))
+        }
         
         let formula: Logic = matrix.reduce(Literal.True, &)
 
