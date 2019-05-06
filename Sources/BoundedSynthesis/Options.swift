@@ -126,7 +126,7 @@ public struct BoSyOptions {
                     throw CommandLineOptionsError.wrongChoice(argument: argument, choice: value, choices: ExplicitScenarioType.allValues.map({ $0.rawValue }))
                 }
                 explicitSct = _explicitSct
-            case "--input-symbolic":
+            case "--input-symbolic-sct":
                 guard let value = arguments.popFirst() else {
                     throw CommandLineOptionsError.noValue(argument: argument)
                 }
