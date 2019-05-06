@@ -107,49 +107,86 @@ struct InputSymbolicEncoding: BoSyEncoding {
             }
 
             var cr: [Logic] = []
-            for node in scenarioTree.nodes {
-                let j = node.id
 
-                var tmp: [Logic] = []
+            switch self.options.inputSymbolicSct {
+            case .base:
+                for node in scenarioTree.nodes {
+                    let j = node.id
 
-                let inputGroups = node.outs.group(by : { VarsHashable(vars: $0.1.inputs) })
-                for outsSeq in inputGroups {
-                    let inputsRaw: Vars = outsSeq.first!.1.inputs
-                    var inputs: [Logic] = []
-
-                    if specification.semantics == .mealy {
-                        let positiveInputs: [String] = inputsRaw
-                        let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
-                        inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
-                    }
-
-                    let i: Logic = inputs.reduce(Literal.True, &)
-
-                    var outDisj: [Logic] = []
-                    
-                    for (j_, io) in outsSeq {
+                    var tmp: [Logic] = []
+                    for (j_, io) in node.outs {
                         var disj: [Logic] = []
-                        var outs: [Logic] = []
 
+                        var inputs: [Logic] = []
+                        var outs: [Logic] = []
                         if specification.semantics == .mealy {
                             let positiveOuts: [String] = io.outs
                             let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
                             outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
                                     negativeOuts.map { !Proposition(output($0, forState: source)) })
+
+                            let positiveInputs: [String] = io.inputs
+                            let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
+                            inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
                         }
+                        let i: Logic = inputs.reduce(Literal.True, &)
                         let o: Logic = outs.reduce(Literal.True, &)
 
                         for t_ in 0..<bound {
-                            disj.append(tau(source, t_) --> c(forState: t_, forScenarioVertex: j_))
+                            disj.append(tau(source, t_) & c(forState: t_, forScenarioVertex: j_))
                         }
-                        outDisj.append(o & disj.reduce(Literal.True, &))
+                        tmp.append(i --> (o & disj.reduce(Literal.False, |)))
                     }
-
-
-                    tmp.append(i --> outDisj.reduce(Literal.True, &))
+                    cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
                 }
-                cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
+            case .globalClusters:
+                break
+            case .transitionComplete:
+                for node in scenarioTree.nodes {
+                    let j = node.id
+
+                    var tmp: [Logic] = []
+
+                    let inputGroups = node.outs.group(by : { VarsHashable(vars: $0.1.inputs) })
+                    for outsSeq in inputGroups {
+                        let inputsRaw: Vars = outsSeq.first!.1.inputs
+                        var inputs: [Logic] = []
+
+                        if specification.semantics == .mealy {
+                            let positiveInputs: [String] = inputsRaw
+                            let negativeInputs: [String] = specification.inputs.filter { !positiveInputs.contains($0) }
+                            inputs.append(contentsOf: positiveInputs.map { Proposition($0) } + negativeInputs.map { !Proposition($0) })
+                        }
+
+                        let i: Logic = inputs.reduce(Literal.True, &)
+
+                        var outDisj: [Logic] = []
+
+                        for (j_, io) in outsSeq {
+                            var disj: [Logic] = []
+                            var outs: [Logic] = []
+
+                            if specification.semantics == .mealy {
+                                let positiveOuts: [String] = io.outs
+                                let negativeOuts: [String] = specification.outputs.filter { !positiveOuts.contains($0) }
+                                outs.append(contentsOf: positiveOuts.map { Proposition(output($0, forState: source)) } +
+                                        negativeOuts.map { !Proposition(output($0, forState: source)) })
+                            }
+                            let o: Logic = outs.reduce(Literal.True, &)
+
+                            for t_ in 0..<bound {
+                                disj.append(tau(source, t_) --> c(forState: t_, forScenarioVertex: j_))
+                            }
+                            outDisj.append(o & disj.reduce(Literal.True, &))
+                        }
+
+
+                        tmp.append(i --> outDisj.reduce(Literal.True, &))
+                    }
+                    cr.append(c(forState: source, forScenarioVertex: j) --> tmp.reduce(Literal.True, &))
+                }
             }
+
             matrix.append(cr.reduce(Literal.True, &))
         }
         
