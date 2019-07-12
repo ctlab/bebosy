@@ -1,6 +1,10 @@
-//
+///
 // Created by Руслан Давлетшин on 30/04/2018.
 //
+
+import Utils
+import Foundation
+
 
 
 typealias Vars = [String]
@@ -116,10 +120,12 @@ class ScenarioTree2 {
     var nodes = Set<ScenarioNode2>()
 
     var inputsSet: [(Vars, [Int: [(Int, ScenarioBranch)]])] = []
-
     var nodeIds: [Int] {
         return nodes.map { $0.id }
     }
+
+    var processed = [Bool]()
+
 
     init(scenarios: [[String]]) {
         nodes.insert(root)
@@ -127,12 +133,57 @@ class ScenarioTree2 {
             addScenario(scenario: sc)
         }
 
+        for node in nodes {
+            processed += [false]
+        }
+        processed += [false]
+
         mergeTails()
 
-        recursiveMerge(tail)
+        Logger.default().info("Done merging tails")
+        Logger.default().info("number of nodes before recursive merge = \(nodes.count)")
+        Logger.default().info("tail = \(tail.id), has \(tail.nodesReversed.count) reverse nodes")
+
+        let fileNameTails = "graph-tails.gv"
+        let urlTails = URL(fileURLWithPath: ".").appendingPathComponent(fileNameTails)
+        let myTextTails = self.dot
+        let dataTails = Data(myTextTails.utf8)
+        do {
+            try dataTails.write(to: urlTails, options: .atomic)
+        } catch {
+            print(error)
+        }
+
+
+        for node in nodes {
+            if node.id == 1 {
+                if !node.nodesReversed.isEmpty {
+                    Logger.default().info("Node 1 has reversed nodes...")
+                } else {
+                    Logger.default().info("Node 1 has no reversed nodes")
+
+                }
+                
+            }
+        }
+
+//        recursiveMerge(tail)
+
+        Logger.default().info("Done merging nodes")
+
         nodes.insert(tail)
 
         inputsSet.append(contentsOf: ScenarioTree2.buildInputsSet(forNodes: Array(nodes)))
+
+        let fileName = "graph.gv"
+        let url = URL(fileURLWithPath: ".").appendingPathComponent(fileName)
+        let myText = self.dot
+        let data = Data(myText.utf8)
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            print(error)
+        }
     }
 
     func addScenario(scenario: [String]) {
@@ -156,35 +207,84 @@ class ScenarioTree2 {
     private func mergeTails() {
         var nodesToRemove = Set<ScenarioNode2>()
         for node in nodes {
+            // if a node is a leaf
             if node.nodes.isEmpty {
+                //look at all its parents (should be exactly one)
+                if node.nodesReversed.count > 1 {
+                    Logger.default().info("Assertion violated in mergeTails")
+                }
                 for (branch, rNodes) in node.nodesReversed {
+                    //create a new branch leading to the single tail node
                     for rNode in rNodes {
                         rNode.addNode(branch: branch, node: tail)
                     }
                 }
+
                 nodesToRemove.insert(node)
             }
         }
 
         for node in nodesToRemove {
+            Logger.default().info("Removing node \(node.id)")
             nodes.remove(node)
         }
     }
 
     private func recursiveMerge(_ node: ScenarioNode2) {
+        if node.id == 1  {
+            if node.nodesReversed.isEmpty {
+                Logger.default().info("Node 1 has no reverse nodes")
+                let fileName = "graph-before.gv"
+                let url = URL(fileURLWithPath: ".").appendingPathComponent(fileName)
+                let myText = self.dot
+                let data = Data(myText.utf8)
+                do {
+                    try data.write(to: url, options: .atomic)
+                } catch {
+                    print(error)
+                }
+
+            }
+            for (_, rNodes) in node.nodesReversed {
+                for rNode in rNodes {
+                     Logger.default().info("reverse node of node 1 is node \(rNode.id)")
+                }
+            }
+        }
+
+//        Logger.default().info("current size=\(nodes.count), merging node \(node.id), it has children \(node.nodesReversed.count)")
         for (_, rNodes) in node.nodesReversed {
             let to = rNodes.first!
+            Logger.default().info("node = \(node.id), to = \(to.id)")
             for rNode in rNodes.dropFirst() {
+                Logger.default().info("node = \(node.id), to = \(to.id), rNode = \(rNode.id)")
                 for (branch, nds) in rNode.nodesReversed {
                     for nd in nds {
                         nd.addNode(branch: branch, node: to)
                     }
                 }
-                nodes.remove(rNode)
+                Logger.default().info("Removing node \(rNode.id)")
+                if rNode.id != 1 {
+                    nodes.remove(rNode)
+                }
+
+                let fileName = "graph-after-\(rNode.id).gv"
+                let url = URL(fileURLWithPath: ".").appendingPathComponent(fileName)
+                let myText = self.dot
+                let data = Data(myText.utf8)
+                do {
+                    try data.write(to: url, options: .atomic)
+                } catch {
+                    print(error)
+                }
+
+
             }
 
             recursiveMerge(to)
         }
+
+//        Logger.default().info("Done merging node \(node.id)")
     }
 
 

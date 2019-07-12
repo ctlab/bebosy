@@ -59,6 +59,9 @@ struct InputSymbolicEncoding: BoSyEncoding {
 
         let scenarioTree = sTree
 
+        Logger.default().info("scenario tree size = \(scenarioTree.nodes.count)")
+
+
         if !specification.scenarios.isEmpty {
             initialAssignment[c(forState: 0, forScenarioVertex: scenarioTree.root.id)] = Literal.True
         }
@@ -75,6 +78,16 @@ struct InputSymbolicEncoding: BoSyEncoding {
         }
 //        matrix.append(cComplete.reduce(Literal.True, &))
         
+        for source in states {
+            for dest1 in states {
+               for dest2 in states {
+                   if dest1 < dest2 {
+                       matrix.append(tau(source, dest1) --> !tau(source, dest2))
+                   }
+               }
+            }
+        }
+
         for source in states {
             // there must be at least one transition
             let exists = states.map({ target in tau(source, target)})
@@ -328,6 +341,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
     }
     
     mutating func solve(forBound bound: Int) throws -> Bool {
+//        return false
         Logger.default().info("build encoding for bound \(bound)")
         
         let constraintTimer = options.statistics?.startTimer(phase: .constraintGeneration)
@@ -364,7 +378,7 @@ struct InputSymbolicEncoding: BoSyEncoding {
             return true
         }
         
-        return false
+        return false 
     }
     
     func extractSolution() -> TransitionSystem? {
